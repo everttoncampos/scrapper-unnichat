@@ -31,7 +31,7 @@ export async function runScrapping() {
   try {
     browser = await puppeteer.launch({
       // 2. Adicionar o caminho do executável do Chromium instalado via apt
-      executablePath: '/usr/bin/chromium-browser', 
+      executablePath: '/snap/bin/chromium', 
       headless: true,
       defaultViewport: { width: 1366, height: 800 },
       
