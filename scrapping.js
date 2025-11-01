@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import fs from 'fs';
-import puppeteer from 'puppeteer';
+// 1. Importar 'puppeteer-core' em vez de 'puppeteer'
+import puppeteer from 'puppeteer-core';
 
 export async function runScrapping() {
   const {
@@ -24,18 +25,30 @@ export async function runScrapping() {
     'gap-10'
   ];
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    defaultViewport: { width: 1366, height: 800 },
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
-  const page = await browser.newPage();
+  // Declaramos a variável 'browser' fora do try para que ela seja acessível no bloco catch
+  let browser = null;
 
   try {
+    browser = await puppeteer.launch({
+      // 2. Adicionar o caminho do executável do Chromium instalado via apt
+      executablePath: '/usr/bin/chromium-browser', 
+      headless: true,
+      defaultViewport: { width: 1366, height: 800 },
+      
+      // 3. Adicionar mais alguns argumentos recomendados para estabilidade em servidores
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage', // Previne erros relacionados à memória compartilhada
+        '--disable-gpu', // Desnecessário em modo headless e pode economizar recursos
+      ]
+    });
+
+    const page = await browser.newPage();
+
     await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
 
-    // Login
+    // Login (toda a sua lógica de scraping permanece igual)
     await page.waitForSelector(USER_SELECTOR);
     await page.type(USER_SELECTOR, USERNAME, { delay: 30 });
     await page.waitForSelector(PASS_SELECTOR);
@@ -90,7 +103,6 @@ export async function runScrapping() {
           return btns.some(b => getText(b).includes('desconectar'));
         })
         .map((el, idx) => {
-          // nome e WhatsApp
           let nomeConexao = null;
           let whatsapp = null;
 
@@ -146,7 +158,11 @@ export async function runScrapping() {
 
     return cards;
   } catch (err) {
-    await browser.close();
-    throw err;
+    // Garante que o navegador será fechado mesmo se ocorrer um erro
+    if (browser) {
+      await browser.close();
+    }
+    // Lança o erro para que o chamador da função saiba que algo deu errado
+    throw err; 
   }
 }
